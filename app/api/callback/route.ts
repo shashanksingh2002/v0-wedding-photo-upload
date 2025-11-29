@@ -13,11 +13,13 @@ export async function GET(request: NextRequest) {
     const tokenData = await exchangeCodeForToken(code)
     const userProfile = await getUserProfile(tokenData.access_token)
 
-    // Redirect to upload page with access token
+    // Redirect to upload page with access token and user info
     const uploadUrl = new URL("/upload", request.url)
     uploadUrl.searchParams.set("access_token", tokenData.access_token)
     uploadUrl.searchParams.set("user_id", userProfile.id)
     uploadUrl.searchParams.set("user_email", userProfile.email)
+    // Pass the user's name from Google profile
+    uploadUrl.searchParams.set("user_name", userProfile.name || userProfile.email?.split("@")[0] || "Guest")
 
     return NextResponse.redirect(uploadUrl)
   } catch (error) {

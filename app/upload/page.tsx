@@ -6,6 +6,15 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Upload, ArrowLeft, Loader2, Check, X } from "lucide-react"
+import { getUserFolder, uploadMultipleFiles } from "@/lib/google-drive-client"
+import { WEDDING_FOLDER_ID } from "@/lib/config"
+
+interface FileProgress {
+  fileName: string
+  progress: number
+  status: "pending" | "uploading" | "completed" | "error"
+  error?: string
+}
 
 export default function UploadPage() {
   const router = useRouter()
@@ -16,13 +25,21 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<Map<string, FileProgress>>(new Map())
 
   useEffect(() => {
     const accessToken = searchParams.get("access_token")
     if (!accessToken) {
       router.push("/")
+      return
     }
-  }, [searchParams, router])
+
+    // Auto-populate name from Google profile
+    const userName = searchParams.get("user_name")
+    if (userName && !name) {
+      setName(userName)
+    }
+  }, [searchParams, router, name])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -61,29 +78,32 @@ export default function UploadPage() {
     setError(null)
 
     try {
-      const formData = new FormData()
-      formData.append("name", name)
-      files.forEach((file) => {
-        formData.append("files", file)
-      })
-
       const accessToken = searchParams.get("access_token")
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
+      if (!accessToken) {
+        throw new Error("No access token found. Please sign in again.")
+      }
+
+      if (!WEDDING_FOLDER_ID) {
+        throw new Error("Wedding folder not configured. Please contact administrator.")
+      }
+
+      // Get or create user folder
+      const folderId = await getUserFolder(accessToken, name.trim(), WEDDING_FOLDER_ID)
+
+      // Upload files directly to Google Drive
+      const result = await uploadMultipleFiles(accessToken, files, folderId, (progressMap) => {
+        setUploadProgress(new Map(progressMap))
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Upload failed")
+      if (!result.success) {
+        const errorMsg = result.errors.map((e) => `${e.file}: ${e.error}`).join(", ")
+        throw new Error(`Some uploads failed: ${errorMsg}`)
       }
 
       setSuccess(true)
       setName("")
       setFiles([])
+      setUploadProgress(new Map())
 
       setTimeout(() => {
         router.push("/gallery")
@@ -149,7 +169,11 @@ export default function UploadPage() {
                 className="w-full px-4 py-3 border-2 border-amber-200 rounded-lg focus:border-amber-600 focus:outline-none text-amber-900 placeholder-amber-400"
                 disabled={uploading}
               />
-              <p className="text-xs text-amber-600 mt-1">Your name will be used to organize your uploads</p>
+              <p className="text-xs text-amber-600 mt-1">
+                {searchParams.get("user_name")
+                  ? "Auto-filled from your Google account. You can edit if needed."
+                  : "Your name will be used to organize your uploads"}
+              </p>
             </div>
 
             {/* File Input */}
@@ -180,25 +204,55 @@ export default function UploadPage() {
               <div>
                 <h3 className="font-semibold text-amber-900 mb-3">Selected Files ({files.length})</h3>
                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-amber-50 p-3 rounded border border-amber-200"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-amber-900 truncate">{file.name}</p>
-                        <p className="text-xs text-amber-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        disabled={uploading}
-                        className="ml-2 px-3 py-1 text-red-700 hover:bg-red-50 rounded text-sm font-medium disabled:opacity-50"
+                  {files.map((file, index) => {
+                    const progress = uploadProgress.get(file.name)
+                    return (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-amber-50 p-3 rounded border border-amber-200"
                       >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-amber-900 truncate">{file.name}</p>
+                          <p className="text-xs text-amber-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          {progress && progress.status !== "pending" && (
+                            <div className="mt-1">
+                              {progress.status === "uploading" && (
+                                <>
+                                  <div className="w-full bg-amber-200 rounded-full h-1.5">
+                                    <div
+                                      className="bg-amber-600 h-1.5 rounded-full transition-all duration-300"
+                                      style={{ width: `${progress.progress}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-amber-700 mt-0.5">
+                                    {Math.round(progress.progress)}% uploaded
+                                  </p>
+                                </>
+                              )}
+                              {progress.status === "completed" && (
+                                <p className="text-xs text-green-600 flex items-center gap-1">
+                                  <Check className="w-3 h-3" /> Uploaded successfully
+                                </p>
+                              )}
+                              {progress.status === "error" && (
+                                <p className="text-xs text-red-600 flex items-center gap-1">
+                                  <X className="w-3 h-3" /> {progress.error}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          disabled={uploading}
+                          className="ml-2 px-3 py-1 text-red-700 hover:bg-red-50 rounded text-sm font-medium disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
