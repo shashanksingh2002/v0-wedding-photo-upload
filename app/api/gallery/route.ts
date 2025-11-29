@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     // If folderId is provided, return files from that folder
     if (folderId) {
       const mediaQuery = `'${folderId}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
-      
+
       const mediaResponse = await fetch(
         `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink,webContentLink)&orderBy=createdTime%20desc&supportsAllDrives=true`,
         {
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
 
     // Otherwise, return list of user folders
     const foldersQuery = `'${WEDDING_FOLDER_ID}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`
-    
+
     const foldersResponse = await fetch(
       `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(foldersQuery)}&fields=files(id,name,createdTime)&orderBy=name&supportsAllDrives=true`,
       {

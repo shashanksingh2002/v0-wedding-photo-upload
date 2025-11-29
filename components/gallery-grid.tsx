@@ -20,6 +20,7 @@ interface GalleryGridProps {
 
 export function GalleryGrid({ files }: GalleryGridProps) {
   const [selectedMedia, setSelectedMedia] = useState<GalleryFile | null>(null)
+  const [videoError, setVideoError] = useState(false)
 
   const isVideo = (mimeType: string) => mimeType.startsWith("video/")
 
@@ -45,6 +46,11 @@ export function GalleryGrid({ files }: GalleryGridProps) {
     }
   }
 
+  const handleMediaSelect = (file: GalleryFile) => {
+    setSelectedMedia(file)
+    setVideoError(false)
+  }
+
   return (
     <>
       {/* Gallery Grid */}
@@ -52,7 +58,7 @@ export function GalleryGrid({ files }: GalleryGridProps) {
         {files.map((file) => (
           <div key={file.id} className="relative group">
             <button
-              onClick={() => setSelectedMedia(file)}
+              onClick={() => handleMediaSelect(file)}
               className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:shadow-lg transition cursor-pointer bg-amber-100 w-full"
             >
               {isVideo(file.mimeType) ? (
@@ -116,14 +122,35 @@ export function GalleryGrid({ files }: GalleryGridProps) {
             </button>
 
             {isVideo(selectedMedia.mimeType) ? (
-              <div className="w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                <iframe
-                  src={`https://drive.google.com/file/d/${selectedMedia.id}/preview`}
-                  className="w-full h-full"
-                  allow="autoplay"
-                  allowFullScreen
-                  style={{ minHeight: "500px" }}
-                />
+              <div className="w-full h-full flex items-center justify-center flex-col gap-4 p-8" onClick={(e) => e.stopPropagation()}>
+                {!videoError ? (
+                  <iframe
+                    src={`https://drive.google.com/file/d/${selectedMedia.id}/preview`}
+                    className="w-full h-full"
+                    allow="autoplay"
+                    allowFullScreen
+                    style={{ minHeight: "500px" }}
+                    onError={() => setVideoError(true)}
+                  />
+                ) : (
+                  <div className="text-center">
+                    <Play className="w-16 h-16 text-white/60 mx-auto mb-4" />
+                    <p className="text-white text-lg mb-2">Video preview unavailable</p>
+                    <p className="text-white/70 text-sm mb-6">
+                      This video might be too large or in an unsupported format for preview
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDownload(selectedMedia)
+                      }}
+                      className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium inline-flex items-center gap-2 transition"
+                    >
+                      <Download className="w-5 h-5" />
+                      Download Video to Watch
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <img
