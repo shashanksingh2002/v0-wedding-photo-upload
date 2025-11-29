@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Camera, Upload } from "lucide-react"
+import { Camera, Upload, ExternalLink } from "lucide-react"
 import { GoogleLoginHelp } from "@/components/google-login-help"
 
 export default function Home() {
@@ -94,6 +94,33 @@ export default function Home() {
               </p>
             </div>
           </button>
+
+          {/* Alternative: Direct Google Drive Link */}
+          <div className="bg-white/60 rounded-lg border-2 border-dashed border-amber-300 p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <ExternalLink className="w-5 h-5 text-amber-700" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-2">Alternative: Upload via Google Drive</h3>
+                <p className="text-sm text-amber-700 mb-3">
+                  Already have a Google account? You can also upload directly to our Google Drive folder
+                </p>
+                <a
+                  href="https://drive.google.com/drive/folders/1mp1XLwHoCzIndigZpntieKY4q9q3A9Fy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white text-amber-700 border-2 border-amber-600 rounded-lg hover:bg-amber-50 transition font-medium text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open in Google Drive
+                </a>
+                <p className="text-xs text-amber-600 mt-2">
+                  ℹ️ Create a folder with your name and upload your photos there
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Decorative divider */}
