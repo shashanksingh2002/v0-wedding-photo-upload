@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createSign } from "crypto"
 
 const WEDDING_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID
 const SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
@@ -11,7 +12,12 @@ async function getServiceAccountToken() {
   try {
     const serviceAccount = JSON.parse(SERVICE_ACCOUNT_KEY)
 
-    // Create JWT payload
+    const header = {
+      alg: "RS256",
+      typ: "JWT",
+      kid: serviceAccount.private_key_id,
+    }
+
     const now = Math.floor(Date.now() / 1000)
     const payload = {
       iss: serviceAccount.client_email,
@@ -21,14 +27,17 @@ async function getServiceAccountToken() {
       iat: now,
     }
 
-    // For production, sign with private key using crypto
-    // Placeholder: In real implementation, use a JWT signing library
-    const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url")
-    const payloadStr = Buffer.from(JSON.stringify(payload)).toString("base64url")
+    const headerB64 = Buffer.from(JSON.stringify(header)).toString("base64url")
+    const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url")
+    const message = `${headerB64}.${payloadB64}`
 
-    // Simple approach: Use Google's JWT library via API
-    // For now, return a basic implementation
-    const jwt = `${header}.${payloadStr}.signature`
+    // Sign with RS256 using the private key
+    const signer = createSign("RSA-SHA256")
+    signer.update(message)
+    signer.end()
+    const signature = signer.sign(serviceAccount.private_key, "base64url")
+
+    const jwt = `${message}.${signature}`
 
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -42,21 +51,26 @@ async function getServiceAccountToken() {
     })
 
     if (!response.ok) {
-      console.error("[v0] Failed to get token:", await response.text())
-      return null
+      const errorText = await response.text()
+      console.error("[v0] Token response error:", errorText)
+      throw new Error(`Failed to get token: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log("[v0] Service account token obtained successfully")
     return data.access_token
   } catch (error) {
     console.error("[v0] Service account error:", error)
-    return null
+    throw error
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[v0] Gallery API called")
+
     if (!WEDDING_FOLDER_ID) {
+      console.error("[v0] GOOGLE_DRIVE_FOLDER_ID not set")
       return NextResponse.json(
         {
           files: [],
@@ -67,6 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!SERVICE_ACCOUNT_KEY) {
+      console.error("[v0] SERVICE_ACCOUNT_KEY not set")
       return NextResponse.json(
         {
           files: [],
@@ -78,21 +93,16 @@ export async function GET(request: NextRequest) {
 
     // Get service account token
     const token = await getServiceAccountToken()
+    console.log("[v0] Got token, fetching files from folder:", WEDDING_FOLDER_ID)
+
     if (!token) {
-      return NextResponse.json(
-        {
-          files: [],
-          error: "Failed to authenticate with service account",
-        },
-        { status: 401 },
-      )
+      throw new Error("No token received")
     }
 
-    // Query for all media files recursively
     const query = `'${WEDDING_FOLDER_ID}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
 
     const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&spaces=drive&pageSize=1000&fields=files(id,name,webContentLink,mimeType,createdTime,size,owners)&orderBy=createdTime desc&supportsAllDrives=true`,
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&spaces=drive&pageSize=1000&fields=files(id,name,webContentLink,mimeType,createdTime,size,parents)&orderBy=createdTime%20desc&supportsAllDrives=true&corpora=allDrives`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -101,18 +111,15 @@ export async function GET(request: NextRequest) {
     )
 
     if (!response.ok) {
-      console.error("[v0] Failed to fetch files:", await response.text())
-      return NextResponse.json(
-        {
-          files: [],
-          error: "Failed to fetch gallery files",
-        },
-        { status: 500 },
-      )
+      const errorText = await response.text()
+      console.error("[v0] Drive API error:", errorText)
+      throw new Error(`Drive API error: ${response.status}`)
     }
 
     const data = await response.json()
     const files = data.files || []
+
+    console.log(`[v0] Found ${files.length} files`)
 
     return NextResponse.json({
       files: files.map((file: any) => ({
@@ -121,14 +128,15 @@ export async function GET(request: NextRequest) {
         webContentLink: file.webContentLink,
         mimeType: file.mimeType,
         createdTime: file.createdTime,
-        thumbnailLink: file.id ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w320` : null,
+        thumbnailLink: `https://drive-thumnails.googleusercontent.com/d/${file.id}=w320-h320`,
       })),
     })
   } catch (error) {
     console.error("[v0] Gallery error:", error)
     return NextResponse.json(
       {
-        error: "Failed to fetch gallery",
+        files: [],
+        error: error instanceof Error ? error.message : "Failed to fetch gallery",
       },
       { status: 500 },
     )
