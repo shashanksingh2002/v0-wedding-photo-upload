@@ -103,18 +103,24 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const folderId = searchParams.get("folderId")
 
-    // If folderId is provided, return files from that folder
+    // If folderId is provided, return files from that folder with pagination
     if (folderId) {
+      const pageSize = 20 // Load 20 images at a time
+      const pageToken = searchParams.get("pageToken")
+      
       const mediaQuery = `'${folderId}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
-
-      const mediaResponse = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink,webContentLink)&orderBy=createdTime%20desc&supportsAllDrives=true`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      
+      let apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=${pageSize}&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink,webContentLink),nextPageToken&orderBy=createdTime%20desc&supportsAllDrives=true`
+      
+      if (pageToken) {
+        apiUrl += `&pageToken=${pageToken}`
+      }
+      
+      const mediaResponse = await fetch(apiUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      )
+      })
 
       if (!mediaResponse.ok) {
         const errorText = await mediaResponse.text()
@@ -124,8 +130,9 @@ export async function GET(request: NextRequest) {
 
       const mediaData = await mediaResponse.json()
       const files = mediaData.files || []
+      const nextPageToken = mediaData.nextPageToken
 
-      console.log(`[v0] Found ${files.length} files in folder ${folderId}`)
+      console.log(`[v0] Found ${files.length} files in folder ${folderId}, hasMore: ${!!nextPageToken}`)
 
       return NextResponse.json({
         files: files.map((file: any) => ({
@@ -138,6 +145,8 @@ export async function GET(request: NextRequest) {
           viewLink: `/api/proxy-image?id=${file.id}`,
           webViewLink: file.webViewLink,
         })),
+        nextPageToken: nextPageToken || null,
+        hasMore: !!nextPageToken,
       })
     }
 

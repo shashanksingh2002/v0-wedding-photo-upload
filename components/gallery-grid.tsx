@@ -69,6 +69,7 @@ export function GalleryGrid({ files }: GalleryGridProps) {
                     src={file.thumbnailLink}
                     alt={file.name}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                     onError={(e) => {
                       e.currentTarget.src = "/placeholder.svg"
                     }}
@@ -79,6 +80,7 @@ export function GalleryGrid({ files }: GalleryGridProps) {
                   src={file.thumbnailLink}
                   alt={file.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition"
+                  loading="lazy"
                   onError={(e) => {
                     e.currentTarget.src = "/placeholder.svg"
                   }}

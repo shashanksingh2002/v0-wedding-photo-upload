@@ -10,11 +10,32 @@ export default function GalleryPage() {
   const [files, setFiles] = useState<any[]>([])
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
 
   useEffect(() => {
     fetchFolders()
   }, [])
+
+  // Infinite scroll - detect when user scrolls near bottom
+  useEffect(() => {
+    if (!selectedFolder || !hasMore || loadingMore) return
+
+    const handleScroll = () => {
+      // Check if user is near bottom (within 500px)
+      const scrollPosition = window.innerHeight + window.scrollY
+      const bottomPosition = document.documentElement.scrollHeight - 500
+
+      if (scrollPosition >= bottomPosition) {
+        loadMoreFiles()
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [selectedFolder, hasMore, loadingMore, nextPageToken])
 
   const fetchFolders = async () => {
     try {
@@ -34,21 +55,42 @@ export default function GalleryPage() {
     }
   }
 
-  const fetchFolderFiles = async (folderId: string) => {
+  const fetchFolderFiles = async (folderId: string, pageToken?: string) => {
     try {
-      setLoading(true)
-      const response = await fetch(`/api/gallery?folderId=${folderId}`)
+      if (!pageToken) {
+        setLoading(true)
+        setFiles([]) // Clear files when loading fresh
+      } else {
+        setLoadingMore(true)
+      }
+
+      const url = pageToken 
+        ? `/api/gallery?folderId=${folderId}&pageToken=${pageToken}`
+        : `/api/gallery?folderId=${folderId}`
+      
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error("Failed to fetch files")
       }
       const data = await response.json()
-      setFiles(data.files || [])
+      
+      // Append new files if loading more, otherwise replace
+      setFiles(prev => pageToken ? [...prev, ...(data.files || [])] : (data.files || []))
+      setNextPageToken(data.nextPageToken)
+      setHasMore(data.hasMore)
       setError(null)
     } catch (err) {
       console.error("Files error:", err)
       setError(err instanceof Error ? err.message : "Failed to load files")
     } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  const loadMoreFiles = () => {
+    if (selectedFolder && nextPageToken && !loadingMore) {
+      fetchFolderFiles(selectedFolder.id, nextPageToken)
     }
   }
 
@@ -60,6 +102,8 @@ export default function GalleryPage() {
   const handleBackToFolders = () => {
     setSelectedFolder(null)
     setFiles([])
+    setNextPageToken(null)
+    setHasMore(false)
   }
 
   const handleDownloadFolder = async (folderId: string, folderName: string) => {
@@ -134,6 +178,7 @@ export default function GalleryPage() {
               <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <p className="text-amber-700">
                   <span className="font-semibold">{files.length}</span> photo{files.length !== 1 ? "s" : ""} and video{files.length !== 1 ? "s" : ""}
+                  {hasMore && <span className="text-amber-600 ml-2">(scroll for more)</span>}
                 </p>
                 <button
                   onClick={() => handleDownloadFolder(selectedFolder.id, selectedFolder.name)}
@@ -144,6 +189,21 @@ export default function GalleryPage() {
                 </button>
               </div>
               <GalleryGrid files={files} />
+              
+              {/* Loading more indicator */}
+              {loadingMore && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-amber-700 mr-2" />
+                  <p className="text-amber-700">Loading more...</p>
+                </div>
+              )}
+
+              {/* End of results */}
+              {!hasMore && files.length > 0 && (
+                <div className="text-center py-8">
+                  <p className="text-amber-600 text-sm">✓ All photos loaded</p>
+                </div>
+              )}
             </>
           )
         ) : (
