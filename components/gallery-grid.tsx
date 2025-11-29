@@ -75,7 +75,15 @@ export function GalleryGrid({ files }: GalleryGridProps) {
             </button>
 
             {isVideo(selectedMedia.mimeType) ? (
-              <video src={selectedMedia.viewLink} controls autoPlay className="max-w-full max-h-full" />
+              <div className="w-full h-full flex items-center justify-center">
+                <iframe
+                  src={`https://drive.google.com/file/d/${selectedMedia.id}/preview`}
+                  className="w-full h-full"
+                  allow="autoplay"
+                  allowFullScreen
+                  style={{ minHeight: "500px" }}
+                />
+              </div>
             ) : (
               <img
                 src={selectedMedia.viewLink}
