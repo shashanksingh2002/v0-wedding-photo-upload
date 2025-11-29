@@ -9,7 +9,7 @@ interface GalleryFile {
   webContentLink: string
   mimeType: string
   createdTime: string
-  uploadedBy?: string
+  uploaderName?: string
 }
 
 interface GalleryGridProps {
@@ -73,7 +73,7 @@ export function GalleryGrid({ files }: GalleryGridProps) {
             )}
 
             <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-4 text-white text-sm">
-              <p className="font-semibold">{selectedMedia.uploadedBy}</p>
+              {selectedMedia.uploaderName && <p className="font-semibold">Uploaded by: {selectedMedia.uploaderName}</p>}
               <p className="text-gray-300">{new Date(selectedMedia.createdTime).toLocaleDateString()}</p>
             </div>
           </div>

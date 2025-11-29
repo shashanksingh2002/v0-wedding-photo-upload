@@ -99,10 +99,11 @@ export async function GET(request: NextRequest) {
       throw new Error("No token received")
     }
 
-    const query = `'${WEDDING_FOLDER_ID}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
-
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&spaces=drive&pageSize=1000&fields=files(id,name,webContentLink,mimeType,createdTime,size,parents)&orderBy=createdTime%20desc&supportsAllDrives=true&corpora=allDrives`,
+    // First, get all subfolders (user folders)
+    const foldersQuery = `'${WEDDING_FOLDER_ID}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`
+    
+    const foldersResponse = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(foldersQuery)}&fields=files(id,name)&supportsAllDrives=true`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -110,16 +111,44 @@ export async function GET(request: NextRequest) {
       },
     )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error("[v0] Drive API error:", errorText)
-      throw new Error(`Drive API error: ${response.status}`)
+    if (!foldersResponse.ok) {
+      const errorText = await foldersResponse.text()
+      console.error("[v0] Folders API error:", errorText)
+      throw new Error(`Folders API error: ${foldersResponse.status}`)
     }
 
-    const data = await response.json()
-    const files = data.files || []
+    const foldersData = await foldersResponse.json()
+    const userFolders = foldersData.files || []
 
-    console.log(`[v0] Found ${files.length} files`)
+    console.log(`[v0] Found ${userFolders.length} user folders`)
+
+    // Now get all media files from each user folder
+    const allFiles: any[] = []
+    
+    for (const folder of userFolders) {
+      const mediaQuery = `'${folder.id}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
+      
+      const mediaResponse = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,webContentLink,mimeType,createdTime,size)&orderBy=createdTime%20desc&supportsAllDrives=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      )
+
+      if (mediaResponse.ok) {
+        const mediaData = await mediaResponse.json()
+        const filesWithUser = (mediaData.files || []).map((file: any) => ({
+          ...file,
+          uploaderName: folder.name, // Add the user folder name
+        }))
+        allFiles.push(...filesWithUser)
+      }
+    }
+
+    const files = allFiles
+    console.log(`[v0] Found ${files.length} total media files across all user folders`)
 
     return NextResponse.json({
       files: files.map((file: any) => ({
@@ -128,6 +157,7 @@ export async function GET(request: NextRequest) {
         webContentLink: file.webContentLink,
         mimeType: file.mimeType,
         createdTime: file.createdTime,
+        uploaderName: file.uploaderName, // Include who uploaded it
         thumbnailLink: `https://drive-thumnails.googleusercontent.com/d/${file.id}=w320-h320`,
       })),
     })
