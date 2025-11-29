@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Camera, Upload } from "lucide-react"
+import { GoogleLoginHelp } from "@/components/google-login-help"
 
 export default function Home() {
   const router = useRouter()
@@ -113,6 +114,9 @@ export default function Home() {
             <li>✓ All uploads are permanent and cannot be deleted</li>
           </ul>
         </div>
+
+        {/* Google Login Help */}
+        <GoogleLoginHelp />
       </div>
     </main>
   )
