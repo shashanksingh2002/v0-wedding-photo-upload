@@ -116,7 +116,7 @@ export function GalleryGrid({ files }: GalleryGridProps) {
             </button>
 
             {isVideo(selectedMedia.mimeType) ? (
-              <div className="w-full h-full flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                 <iframe
                   src={`https://drive.google.com/file/d/${selectedMedia.id}/preview`}
                   className="w-full h-full"
@@ -130,6 +130,10 @@ export function GalleryGrid({ files }: GalleryGridProps) {
                 src={selectedMedia.viewLink}
                 alt={selectedMedia.name}
                 className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  console.error("Failed to load image:", selectedMedia.id)
+                  e.currentTarget.src = "/placeholder.svg"
+                }}
               />
             )}
 

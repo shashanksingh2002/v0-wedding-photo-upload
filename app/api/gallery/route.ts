@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       const mediaQuery = `'${folderId}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
       
       const mediaResponse = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink)&orderBy=createdTime%20desc&supportsAllDrives=true`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink,webContentLink)&orderBy=createdTime%20desc&supportsAllDrives=true`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -133,8 +133,9 @@ export async function GET(request: NextRequest) {
           name: file.name,
           mimeType: file.mimeType,
           createdTime: file.createdTime,
-          thumbnailLink: `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`,
-          viewLink: `https://drive.google.com/uc?id=${file.id}&export=view`,
+          // Use proxy endpoint for images to handle auth and CORS
+          thumbnailLink: `/api/proxy-image?id=${file.id}&size=thumb`,
+          viewLink: `/api/proxy-image?id=${file.id}`,
           webViewLink: file.webViewLink,
         })),
       })
