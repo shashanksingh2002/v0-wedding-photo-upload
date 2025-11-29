@@ -111,7 +111,7 @@ export default function UploadPage() {
       // Get or create user folder
       const folderId = await getUserFolder(accessToken, name.trim(), WEDDING_FOLDER_ID)
 
-      // Upload files directly to Google Drive
+      // Upload files directly to Google Drive from browser
       const result = await uploadMultipleFiles(accessToken, files, folderId, (progressMap) => {
         setUploadProgress(new Map(progressMap))
       })

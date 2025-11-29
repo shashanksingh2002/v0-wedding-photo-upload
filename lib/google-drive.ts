@@ -4,9 +4,15 @@ const REDIRECT_URI = process.env.REDIRECT_URI || "http://localhost:3000/api/call
 const SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
 
 export async function getGoogleAuthUrl() {
-  // Using drive scope (not drive.file) because users need to upload to a shared central folder
-  // drive.file only works for files created by the app, which won't work for a pre-existing wedding folder
-  const scopes = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/userinfo.profile"]
+  // Use drive.file scope - ONLY files created by this app (NOT user's entire Drive!)
+  // This is NOT a restricted scope - no verification needed, no scary warnings!
+  // Users can ONLY access:
+  //   - Files they upload through this app
+  //   - The shared wedding folder (if shared with "Anyone with link can edit")
+  const scopes = [
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/userinfo.profile"
+  ]
 
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID!,

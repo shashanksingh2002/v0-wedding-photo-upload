@@ -1,44 +1,49 @@
 "use client"
 
-import { AlertCircle, Shield, CheckCircle } from "lucide-react"
+import { Shield, CheckCircle, Info } from "lucide-react"
 
 export function GoogleLoginHelp() {
   return (
-    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <Shield className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
         <div className="flex-1">
-          <h4 className="font-semibold text-blue-900 mb-2 text-sm">
-            Google Login Instructions
+          <h4 className="font-semibold text-green-900 mb-2 text-sm">
+            Why We Need Google Sign In
           </h4>
-          <div className="space-y-2 text-xs text-blue-800">
+          <div className="space-y-2 text-xs text-green-800">
             <p className="flex items-start gap-2">
-              <span className="font-bold">1.</span>
-              <span>Click "Add Your Photos" and sign in with Google</span>
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <span>Sign in to get your name and identify yourself</span>
             </p>
             <p className="flex items-start gap-2">
-              <span className="font-bold">2.</span>
-              <span>You may see "Google hasn't verified this app" - this is normal</span>
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <span>Upload photos directly from your device to the wedding folder</span>
             </p>
             <p className="flex items-start gap-2">
-              <span className="font-bold">3.</span>
-              <span>Click <strong>"Advanced"</strong> at the bottom</span>
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <span>No file size limits - upload full-resolution photos and videos</span>
             </p>
             <p className="flex items-start gap-2">
-              <span className="font-bold">4.</span>
-              <span>Click <strong>"Go to Wedding Photos (unsafe)"</strong></span>
-            </p>
-            <p className="flex items-start gap-2">
-              <span className="font-bold">5.</span>
-              <span>Click <strong>"Continue"</strong> to grant permissions</span>
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <span>All photos organized by your name in a shared folder</span>
             </p>
           </div>
           
-          <div className="mt-3 pt-3 border-t border-blue-200">
+          <div className="mt-3 pt-3 border-t border-green-200">
             <div className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-900">
-                <strong>Don't worry!</strong> This is a private wedding app. The warning appears because it's not a commercial app. Your photos are safe and only accessible to wedding guests.
+              <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-green-900">
+                <strong>What we access:</strong> Only files you upload through this app and your basic profile (name). We do NOT access your existing Google Drive files.
+              </p>
+            </div>
+          </div>
+          
+          <div className="mt-2">
+            <div className="flex items-start gap-2">
+              <Shield className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-green-900">
+                <strong>Privacy:</strong> This is a private wedding app. Only wedding guests can access photos.
               </p>
             </div>
           </div>
