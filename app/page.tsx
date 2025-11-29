@@ -1,13 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Camera, Upload } from "lucide-react"
 
 export default function Home() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [hasToken, setHasToken] = useState(false)
+
+  useEffect(() => {
+    // Check if user is already authenticated
+    const token = localStorage.getItem("google_access_token")
+    if (token) {
+      setHasToken(true)
+    }
+  }, [])
 
   const handleGoogleAuth = async () => {
+    // If already authenticated, go directly to upload
+    const token = localStorage.getItem("google_access_token")
+    if (token) {
+      router.push("/upload")
+      return
+    }
+
+    // Otherwise, authenticate
     setIsLoading(true)
     try {
       window.location.href = "/api/auth/google"
@@ -66,7 +85,11 @@ export default function Home() {
                 <h2 className="text-2xl font-bold">Add Your Photos</h2>
               </div>
               <p className="ml-16">
-                {isLoading ? "Connecting to Google..." : "Share your special moments from the wedding"}
+                {isLoading
+                  ? "Connecting to Google..."
+                  : hasToken
+                    ? "Continue uploading (already signed in)"
+                    : "Share your special moments from the wedding"}
               </p>
             </div>
           </button>

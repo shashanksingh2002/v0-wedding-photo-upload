@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Upload, ArrowLeft, Loader2, Check, X } from "lucide-react"
+import { Upload, ArrowLeft, Loader2, Check, X, LogOut } from "lucide-react"
 import { getUserFolder, uploadMultipleFiles } from "@/lib/google-drive-client"
 import { WEDDING_FOLDER_ID } from "@/lib/config"
 
@@ -28,16 +28,30 @@ export default function UploadPage() {
   const [uploadProgress, setUploadProgress] = useState<Map<string, FileProgress>>(new Map())
 
   useEffect(() => {
+    // Check for token in URL params (from OAuth callback)
     const accessToken = searchParams.get("access_token")
-    if (!accessToken) {
+    const userName = searchParams.get("user_name")
+    
+    if (accessToken) {
+      // Store token in localStorage for future use
+      localStorage.setItem("google_access_token", accessToken)
+      if (userName) {
+        localStorage.setItem("user_name", userName)
+      }
+    }
+
+    // Check if we have a stored token
+    const storedToken = localStorage.getItem("google_access_token")
+    if (!accessToken && !storedToken) {
+      // No token available, redirect to home
       router.push("/")
       return
     }
 
-    // Auto-populate name from Google profile
-    const userName = searchParams.get("user_name")
-    if (userName && !name) {
-      setName(userName)
+    // Auto-populate name from URL or localStorage
+    const savedName = userName || localStorage.getItem("user_name")
+    if (savedName && !name) {
+      setName(savedName)
     }
   }, [searchParams, router, name])
 
@@ -61,6 +75,12 @@ export default function UploadPage() {
     setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const handleSignOut = () => {
+    localStorage.removeItem("google_access_token")
+    localStorage.removeItem("user_name")
+    router.push("/")
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -78,7 +98,8 @@ export default function UploadPage() {
     setError(null)
 
     try {
-      const accessToken = searchParams.get("access_token")
+      // Get token from URL params or localStorage
+      const accessToken = searchParams.get("access_token") || localStorage.getItem("google_access_token")
       if (!accessToken) {
         throw new Error("No access token found. Please sign in again.")
       }
@@ -120,11 +141,19 @@ export default function UploadPage() {
     <main className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100">
       {/* Header */}
       <header className="bg-white shadow-md sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2 text-amber-700 hover:text-amber-900">
             <ArrowLeft className="w-5 h-5" />
             <span>Back</span>
           </Link>
+          <button
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-2 text-red-600 hover:text-red-800 text-sm"
+            title="Sign out and use a different account"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </header>
 
@@ -170,7 +199,7 @@ export default function UploadPage() {
                 disabled={uploading}
               />
               <p className="text-xs text-amber-600 mt-1">
-                {searchParams.get("user_name")
+                {searchParams.get("user_name") || localStorage.getItem("user_name")
                   ? "Auto-filled from your Google account. You can edit if needed."
                   : "Your name will be used to organize your uploads"}
               </p>
