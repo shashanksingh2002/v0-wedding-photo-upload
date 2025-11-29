@@ -6,10 +6,12 @@ import { Play } from "lucide-react"
 interface GalleryFile {
   id: string
   name: string
-  webContentLink: string
   mimeType: string
   createdTime: string
   uploaderName?: string
+  thumbnailLink: string
+  viewLink: string
+  webViewLink?: string
 }
 
 interface GalleryGridProps {
@@ -35,13 +37,23 @@ export function GalleryGrid({ files }: GalleryGridProps) {
               <>
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition"></div>
                 <Play className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-white z-10" />
-                <video src={file.webContentLink} className="w-full h-full object-cover" preload="metadata" />
+                <img
+                  src={file.thumbnailLink}
+                  alt={file.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg"
+                  }}
+                />
               </>
             ) : (
               <img
-                src={file.webContentLink || "/placeholder.svg"}
+                src={file.thumbnailLink}
                 alt={file.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg"
+                }}
               />
             )}
           </button>
@@ -63,10 +75,10 @@ export function GalleryGrid({ files }: GalleryGridProps) {
             </button>
 
             {isVideo(selectedMedia.mimeType) ? (
-              <video src={selectedMedia.webContentLink} controls autoPlay className="max-w-full max-h-full" />
+              <video src={selectedMedia.viewLink} controls autoPlay className="max-w-full max-h-full" />
             ) : (
               <img
-                src={selectedMedia.webContentLink || "/placeholder.svg"}
+                src={selectedMedia.viewLink}
                 alt={selectedMedia.name}
                 className="max-w-full max-h-full object-contain"
               />

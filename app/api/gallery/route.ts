@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
       const mediaQuery = `'${folder.id}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
       
       const mediaResponse = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,webContentLink,mimeType,createdTime,size)&orderBy=createdTime%20desc&supportsAllDrives=true`,
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=1000&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink)&orderBy=createdTime%20desc&supportsAllDrives=true`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -154,11 +154,13 @@ export async function GET(request: NextRequest) {
       files: files.map((file: any) => ({
         id: file.id,
         name: file.name,
-        webContentLink: file.webContentLink,
         mimeType: file.mimeType,
         createdTime: file.createdTime,
-        uploaderName: file.uploaderName, // Include who uploaded it
-        thumbnailLink: `https://drive-thumnails.googleusercontent.com/d/${file.id}=w320-h320`,
+        uploaderName: file.uploaderName,
+        // Use Google Drive's public URLs that work without authentication
+        thumbnailLink: `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`,
+        viewLink: `https://drive.google.com/uc?id=${file.id}&export=view`,
+        webViewLink: file.webViewLink, // Fallback for videos
       })),
     })
   } catch (error) {
