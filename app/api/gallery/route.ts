@@ -107,15 +107,15 @@ export async function GET(request: NextRequest) {
     if (folderId) {
       const pageSize = 20 // Load 20 images at a time
       const pageToken = searchParams.get("pageToken")
-      
+
       const mediaQuery = `'${folderId}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`
-      
+
       let apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(mediaQuery)}&pageSize=${pageSize}&fields=files(id,name,mimeType,createdTime,size,thumbnailLink,webViewLink,webContentLink),nextPageToken&orderBy=createdTime%20desc&supportsAllDrives=true`
-      
+
       if (pageToken) {
         apiUrl += `&pageToken=${pageToken}`
       }
-      
+
       const mediaResponse = await fetch(apiUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
