@@ -90,7 +90,8 @@ export async function uploadFileToGoogleDrive(
 }
 
 /**
- * Upload multiple files to Google Drive with progress tracking
+ * Upload multiple files to Google Drive with progress tracking (PARALLEL)
+ * Uploads up to 3 files at a time for optimal performance
  */
 export async function uploadMultipleFiles(
   accessToken: string,
@@ -116,8 +117,11 @@ export async function uploadMultipleFiles(
   const results: any[] = []
   const errors: any[] = []
 
-  // Upload files sequentially to avoid overwhelming the browser
-  for (const file of files) {
+  // Upload with concurrency limit (3 files at a time)
+  const CONCURRENCY_LIMIT = 3
+  
+  // Function to upload a single file
+  const uploadFile = async (file: File) => {
     try {
       // Update status to uploading
       progressMap.set(file.name, {
@@ -151,6 +155,7 @@ export async function uploadMultipleFiles(
       }
 
       results.push(result)
+      return { success: true, file: file.name, result }
     } catch (error) {
       // Mark as error
       const errorMessage = error instanceof Error ? error.message : "Upload failed"
@@ -165,7 +170,22 @@ export async function uploadMultipleFiles(
       }
 
       errors.push({ file: file.name, error: errorMessage })
+      return { success: false, file: file.name, error: errorMessage }
     }
+  }
+
+  // Upload files in parallel with concurrency control
+  const uploadPromises: Promise<any>[] = []
+  let currentIndex = 0
+
+  while (currentIndex < files.length) {
+    // Create batch of promises (up to CONCURRENCY_LIMIT)
+    const batch = files.slice(currentIndex, currentIndex + CONCURRENCY_LIMIT).map(uploadFile)
+    
+    // Wait for this batch to complete before starting next batch
+    await Promise.all(batch)
+    
+    currentIndex += CONCURRENCY_LIMIT
   }
 
   return {
